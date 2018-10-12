@@ -1,0 +1,57 @@
+<!-- 
+    @file: SFBattlePage.vfp
+    @author: Mike Black, mike@mikepblack.com
+    
+    @description: This is the VF page for a simulator of a space battle. The messages are separated 
+    between general and player-specific messages.
+
+    The controller is contained in SFBattle.apxc
+-->
+
+<apex:page controller="SFBattle">
+   
+    <apex:pageBlock title="Salesforce Battle">
+        
+        <!-- BEGIN TOP BUTTON ROW -->
+        <apex:pageBlockSection >
+            <apex:form > 
+                <apex:commandButton action="{!newGame}" value="New Game" />
+                <apex:commandButton action="{!fightBattle}" value="Fire Photon Torpedoes" />
+                <apex:commandButton action="{!generateEnemies}" value="Generate More Enemies" />     
+            </apex:form>
+             
+            <!-- BEGIN PLAYER INFORMATION PANEL -->
+            <apex:outputPanel rendered="{!playerInfoVisibility}">
+                <b>
+                    <apex:outputText value="Player Information"/>
+                </b>
+                <br/>
+                <apex:outputText value="Ship Name: " />
+                <apex:outputText value="USS {!$User.FirstName} {!$User.LastName}" />
+                <br />
+                <apex:outputText value="Health:" />
+                <apex:outputText value="{!playerShipHealth}" />
+                <br />
+            </apex:outputPanel>
+            
+            <!-- BEGIN TEXT STATUS FIELDS -->
+        </apex:pageBlockSection >
+        <apex:pageBlockSection >
+            <apex:outputText value="{!statusFieldA}" escape="false" />
+            <apex:outputText value="{!statusFieldB}" escape="false" />
+        </apex:pageBlockSection>
+        
+        <!-- BEGIN ENEMY SHIP TABLE -->
+        <apex:pageBlockSection >
+            
+            <apex:pageBlockTable value="{!enemyShips}" var="ship" rendered="{!enemyTableVisibility}">
+                <apex:column value="{!ship.Name }"/>
+                <apex:column value="{!ship.Status__c}"/>
+                <apex:column value="{!ship.Weapon__c}"/>
+                <apex:column value="{!ship.Attack_Power__c}"/>
+                <apex:column value="{!ship.Health__c}"/>
+                
+            </apex:pageBlockTable>
+        </apex:pageBlockSection>
+    </apex:pageBlock>
+</apex:page>
