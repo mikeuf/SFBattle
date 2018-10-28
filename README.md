@@ -7,4 +7,4 @@ There are some known bugs. In particular, it is sometimes still possible to cont
 
 ## Typical Gameplay
 **Figure 1 - The Welcome screen**  
-![alt text](https://github.com/mikeuf/SFBattle/blob/master/README-images/1-welcome-screen.png "Logo Title Text 1")
+![alt text](https://github.com/mikeuf/SFBattle/blob/master/README-images/1-welcome-screen.jpg "Logo Title Text 1")
