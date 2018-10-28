@@ -10,3 +10,9 @@ There are some known bugs. In particular, it is sometimes still possible to cont
 ![The Welcome screen](https://github.com/mikeuf/SFBattle/blob/master/README-images/1-welcome-screen.jpg "The Welcome screen")  
 **Figure 2 - Enemy ships approaching**  
 ![Enemy ships approaching](https://github.com/mikeuf/SFBattle/blob/master/README-images/2-enemy-ships-approaching.jpg "Enemy ships approaching")
+
+**Figure 3 - Battle begins**  
+![Battle begins](https://github.com/mikeuf/SFBattle/blob/master/README-images/3-battle.jpg "Battle begins")
+
+**Figure 4 - Game is won**  
+![Game is won](https://github.com/mikeuf/SFBattle/blob/master/README-images/5-game-won.jpg "Game is won")
