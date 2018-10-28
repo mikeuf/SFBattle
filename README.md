@@ -14,5 +14,18 @@ There are some known bugs. In particular, it is sometimes still possible to cont
 **Figure 3 - Battle begins**  
 ![Battle begins](https://github.com/mikeuf/SFBattle/blob/master/README-images/3-battle.jpg "Battle begins")
 
-**Figure 4 - Game is won**  
+**Figure 4 - Some enemy ships destroyed**  
+![Some enemy ships destroyed](https://github.com/mikeuf/SFBattle/blob/master/README-images/4-deceased.jpg "Some enemy ships destroyed")
+
+**Figure 5 - Game is won**  
 ![Game is won](https://github.com/mikeuf/SFBattle/blob/master/README-images/5-game-won.jpg "Game is won")
+
+**Figure 6 - Game is lost**  
+![Game is lost](https://github.com/mikeuf/SFBattle/blob/master/README-images/6-game-lost.jpg "Game is lost")
+
+**Figure 7 - Fleet list**  
+![Fleet list](https://github.com/mikeuf/SFBattle/blob/master/README-images/7-ships-list.jpg "Fleet list")
+
+**Figure 8 - "Ship" custom object**  
+![Ship custom object](https://github.com/mikeuf/SFBattle/blob/master/README-images/8-ship-custom-object "Ship custom object")
+
