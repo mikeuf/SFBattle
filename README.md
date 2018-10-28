@@ -41,7 +41,12 @@ A custom tab can be added, allowed the user to browse the ships, make changes, o
 **Figure 7 - Fleet list**  
 ![Fleet list](https://github.com/mikeuf/SFBattle/blob/master/README-images/7-ships-list.jpg "Fleet list")
 
-The game utilizes a custom object called "Ships" (Figure 8).
+The game utilizes a custom object called "Ships" (Figure 8) with the following custom fields:
+* Attack Power
+* Health
+* Playable_or_Enemy
+* Status
+* Weapon
 
 **Figure 8 - "Ship" custom object**  
 ![Ship custom object](https://github.com/mikeuf/SFBattle/blob/master/README-images/8-ship-custom-object.jpg "Ship custom object")
