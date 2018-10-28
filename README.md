@@ -6,6 +6,5 @@ become more accustomed to designing event/button-driven programs where the state
 There are some known bugs. In particular, it is sometimes still possible to continue firing photon torpedoes even after the player's ship is destroyed. There are some logic errors that still need to be ironed-out. Many items are set to public or static when they probably don't need to be and exception handling has only been implemented in a couple of places.
 
 ## Typical Gameplay
-
-
+**Figure 1 - The Welcome screen**  
 ![alt text](https://github.com/mikeuf/SFBattle/blob/master/README-images/1-welcome-screen.png "Logo Title Text 1")
