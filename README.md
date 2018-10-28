@@ -27,5 +27,5 @@ There are some known bugs. In particular, it is sometimes still possible to cont
 ![Fleet list](https://github.com/mikeuf/SFBattle/blob/master/README-images/7-ships-list.jpg "Fleet list")
 
 **Figure 8 - "Ship" custom object**  
-![Ship custom object](https://github.com/mikeuf/SFBattle/blob/master/README-images/8-ship-custom-object "Ship custom object")
+![Ship custom object](https://github.com/mikeuf/SFBattle/blob/master/README-images/8-ship-custom-object.jpg "Ship custom object")
 
