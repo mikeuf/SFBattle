@@ -1,241 +1,250 @@
 /* @file: SFBattle.apxc
- * @author: Mike Black, mike@mikepblack.com
- * @description:
- * 
- * This is a silly "space battle" simulator. It is primarily a vehicle to experiment with performing various DML operations and
- * become more accustomed to designing event/button-driven programs where the state only lasts for as long as a single transaction.
- * 
- * There are some known bugs. In particular, it is sometimes still possible to continue firing photon torpedoes even after the player's
- * ship is destroyed. There are some logic errors that still need to be ironed-out. Many items are set to public or static when they
- * probably don't need to be and exception handling has only been implemented in a couple of places.
- * 
- */
-
-
+   * @author: Mike Black, mike@mikepblack.com
+   * @description:
+   * 
+   * This is a silly "space battle" simulator. It is primarily a vehicle to experiment with performing various DML operations and
+   * become more accustomed to designing event/button-driven programs where the state only lasts for as long as a single transaction.
+   * Note: At this time most variables are set to public. It's possible that they don't need to be -- I may update this in the future.
+   * Exception handling has only been implemented in a couple of places.
+   * 
+   */
 public with sharing class SFBattle {
-
-  public String statusFieldA {get; set;} // general and enemy status messages
-  public String statusFieldB {get; set;} // status specific to player health
-  public Boolean enemyTableVisibility {get; set;} // determines if table is visible
-  public Boolean playerInfoVisibility {get; set;} // detedmines if player stats are visible
-
-  // constructor
-  public SFBattle() {
-    statusFieldA = '<p>Welcome to SalesForce Battle! Click the <b>Play Game</b> button to begin.</p>';
-    enemyTableVisibility = false;
-    playerInfoVisibility = false;   
-  }
-
-  public void newGame () {
+    
+    public String statusFieldA {get; set;} // general and enemy status messages
+    public String statusFieldB {get; set;} // status specific to player health
+    
+    // these buttons should disappear if the player is defeated, leaving only "New Game" available
+    public Boolean isFirePhotonTorpedoesButtonVisible {get; set;}  
+    public Boolean isGenerateMoreEnemiesButtonVisible {get; set;} 
+    
+    // these should be hidden until a new game is started
+    public Boolean enemyTableVisibility {get; set;}
+    public Boolean playerInfoVisibility {get; set;} 
+ 
+    // constructor
+    public SFBattle() {
+        statusFieldA = '<p>Welcome to SalesForce Battle! Click the <b>Play Game</b> button to begin.</p>';
+        enemyTableVisibility = false;
+        playerInfoVisibility = false;  
+        isFirePhotonTorpedoesButtonVisible = false;
+        isGenerateMoreEnemiesButtonVisible = false;
+    }
+    
     // resets conditions, renders the enemy table and presents a status message about "approaching enemy ships"
-    enemyTableVisibility = true;
-    playerInfoVisibility = true;
+    public void newGame () {
+        enemyTableVisibility = true;
+        playerInfoVisibility = true;
+        isFirePhotonTorpedoesButtonVisible = true;
+        isGenerateMoreEnemiesButtonVisible = true;
+        
+        addPlayerShip();
+        resetPlayerShipHealth();
+        purgeDeadEnemies();
+        
+        list<Ship__c> enemyShips = getActiveEnemyShips();
+        
+        // if there are no enemy ships, create some automatically
+        if (enemyShips.size() < 1) {
+            generateEnemies();
+        }
+        
+        enemyShips = getActiveEnemyShips();      
+        statusFieldA = '<p>' + enemyShips.size() + ' enemy ship(s) are approaching! Your first enemy is a ' + enemyShips[0].Name + '.<br />To attack, click the <b>Fire Photon Torpedoes</b> button.</p>';
+        
+    } // end newGame()
+    
+    // The main battle loop. Both the player and the enemy get to attack each other. 
+    // Calls other methods to determine if anyone is dead    
+    public void fightBattle () {
 
-    addPlayerShip();
-    resetPlayerShipHealth();
-    purgeDeadEnemies();
+        // all panels should be visible here
+        enemyTableVisibility = true;
+        playerInfoVisibility = true;
+        
+        Boolean isBattleWon = false;
+         
+        list<Ship__c> enemyShips = getActiveEnemyShips();
+        Ship__c playerShip = getPlayerShip();
+        
+        // before continuing, verify that the player is not dead and there are still enemy ships available
+        if(!checkIfBattleIsWon() && !checkIfPlayerIsDead(playerShip)) {
+            
+            // determine amount of damage to enemy ship and update the health record accordingly
+            Integer damage = 0;
+            damage = fireWeapons(playerShip);
+            enemyShips[0].Health__c -= damage;
+            
+            update enemyShips[0];
+            
+            statusFieldA = 'Your photon torpedoes have done ' + damage + ' damage to ' + enemyShips[0].Name + '.';
+            
+            if (checkIfEnemyIsDead(enemyShips[0])) {
+                isBattleWon = checkIfBattleIsWon();
+            }
+            
+            // determine amount of damage to player ship and update the health record accordingly
+            if (!isBattleWon) {
+            damage = fireWeapons(enemyShips[0]); 
+            playerShip.Health__c -= damage;
+            
+            update playerShip;
+            }
+            
+            statusFieldB = 'A ' + enemyShips[0].Name + ' has fired upon you with its ' + enemyShips[0].Weapon__c + ', causing ' + damage + ' damage!';
+            
+            checkIfPlayerIsDead(playerShip);   
+        }
+        
+    } // end fightBattle()
+    
+    // get a list of non-deceased enemy ships.
+    // If the list size is 0, assume that the battle is won 
+    public Boolean checkIfBattleIsWon() {
 
-
-    list<Ship__c> enemyShips = getActiveEnemyShips();
-
-    // if there are no enemy ships, create some automatically
-    if (enemyShips.size() < 1) {
-      generateEnemies();
+        list<Ship__c> enemyShips = getActiveEnemyShips();
+        if (enemyShips.size() < 1) {
+            statusFieldA = 'All enemy ships have been destroyed!';
+            statusFieldB = 'Click the <b>New Game</b> button to play.';
+            
+            // remove deceased enemies
+            purgeDeadEnemies();
+            return true;
+        }  
+        return false;
+    }
+    
+    // if enemy ship health is < 1, set Status to "Deceased"
+    // and send a message.
+    public Boolean checkIfEnemyIsDead(Ship__c enemyShip) {
+   
+        // if the health is below 0, reset it to 0 to avoid negative health
+        if (enemyShip.Health__c < 0) {
+            enemyShip.Status__c = 'Deceased';
+            enemyShip.Health__c = 0;
+            update enemyShip;
+            statusFieldA = 'A ' + enemyShip.Name + ' has been destroyed!'; 
+            
+            return true;
+        }
+        
+        return false;
     }
 
-    enemyShips = getActiveEnemyShips();
-
-    statusFieldA = '<p>' + enemyShips.size() + ' enemy ship(s) are approaching! Your first enemy is a ' + enemyShips[0].Name + '.<br />To attack, click the <b>Fire Photon Torpedoes</b> button.</p>';
-
-  } // end newGame()
-
-
-  public void fightBattle () {
-    /* The main battle loop. Both the player and the enemy get to attack each other. 
-     * Calls other methods to determine if anyone is dead */
-
-    // all panels should be visible here
-    enemyTableVisibility = true;
-    playerInfoVisibility = true;
-
-    list<Ship__c> enemyShips = getActiveEnemyShips();
-    Ship__c playerShip = getPlayerShip();
-
-    // before continuing, verify that the player is not dead and there are still enemy ships available
-    if(!checkIfBattleIsWon() && !checkIfPlayerIsDead(playerShip)) {
-
-      // determine amount of damage to enemy ship and update the health record accordingly
-      Integer damage = 0;
-      damage = fireWeapons(playerShip);
-      enemyShips[0].Health__c -= damage;
-
-      update enemyShips[0];
-
-      statusFieldA = 'Your photon torpedoes have done ' + damage + ' damage to ' + enemyShips[0].Name + '.';
-
-      if (checkIfEnemyIsDead(enemyShips[0])) {
-        Boolean isBattleWon = checkIfBattleIsWon();
-      }
-
-      // determine amount of damage to player ship and update the health record accordingly
-      damage = fireWeapons(enemyShips[0]); 
-      playerShip.Health__c -= damage;
-
-
-      update playerShip;
-      statusFieldB = 'A ' + enemyShips[0].Name + ' has fired upon you with its ' + enemyShips[0].Weapon__c + ', causing ' + damage + ' damage!';
-
-      checkIfPlayerIsDead(playerShip);
-
-    }
-
-  } // end fightBattle()
-
-  public Boolean checkIfBattleIsWon() {
-    /* get a list of non-deceased enemy ships.
-     * If the list size is 0, assume that the battle is won */ 
-    list<Ship__c> enemyShips = getActiveEnemyShips();
-    if (enemyShips.size() < 1) {
-      statusFieldA = 'All enemy ships have been destroyed!';
-
-      // remove deceased enemies
-      purgeDeadEnemies();
-      return true;
-    }  
-    return false;
-  }
-
-  public Boolean checkIfEnemyIsDead(Ship__c enemyShip) {
-    /* if enemy ship health is < 1, set Status to "Deceased"
-       and send a message. */ 
-
-    // if the health is below 0, reset it to 0 to avoid negative health
-    if (enemyShip.Health__c < 0) {
-      enemyShip.Status__c = 'Deceased';
-      enemyShip.Health__c = 0;
-      update enemyShip;
-      statusFieldA = 'A ' + enemyShip.Name + ' has been destroyed!'; 
-
-      return true;
-    }
-
-    return false;
-  }
-
-  public Boolean checkIfPlayerIsDead(Ship__c playerShip) {
     // if health is < 1, set Status to Deceased
-
-
-    if (playerShip.Health__c < 0) {
-      playerShip.Status__c = 'Deceased';
-      playerShip.Health__c = 0;
-      update playerShip;
-      statusFieldB = 'Your ship has been destroyed! Better luck next time.'; 
-
-      return true;
+    public Boolean checkIfPlayerIsDead(Ship__c playerShip) {   
+        
+        if (playerShip.Health__c < 0) {
+            playerShip.Status__c = 'Deceased';
+            playerShip.Health__c = 0;
+            update playerShip;
+            statusFieldB = 'Your ship has been destroyed! Better luck next time.'; 
+            isFirePhotonTorpedoesButtonVisible = false;
+            isGenerateMoreEnemiesButtonVisible = false;
+            
+            return true;
+        }
+        
+        return false;
     }
-
-    return false;
-  }
-
-  public Integer getPlayerShipHealth() {
-    // returns player health        
-    Ship__c playerShip = [Select Id, Health__c 
-      FROM Ship__c 
-      WHERE Friend_or_Foe__c = 'Playable' 
-      LIMIT 1];
-
-    return (Integer)playerShip.Health__c;
-  }
-
-  public void resetPlayerShipHealth() {
+    
+      // returns player health        
+      public Integer getPlayerShipHealth() {
+        Ship__c playerShip = [Select Id, Health__c 
+                              FROM Ship__c 
+                              WHERE Friend_or_Foe__c = 'Playable' 
+                              LIMIT 1];
+        
+        return (Integer)playerShip.Health__c;
+    }
+    
     // resets player health back to 100
-    Ship__c playerShip = [Select Id, Health__c 
-      FROM Ship__c 
-      WHERE Friend_or_Foe__c = 'Playable' 
-      LIMIT 1];
-
-    playerShip.Health__c = 100;
-
-    update playerShip;    
-  }
-
-  public list<Ship__c> getEnemyShips() {
+    public void resetPlayerShipHealth() {
+        Ship__c playerShip = [Select Id, Health__c 
+                              FROM Ship__c 
+                              WHERE Friend_or_Foe__c = 'Playable' 
+                              LIMIT 1];
+        
+        playerShip.Health__c = 100;
+        
+        update playerShip;    
+    }
+    
     // get a list of all enemy ships
-    list<Ship__c> enemyShips = [SELECT id, name, Status__c, Weapon__c, Attack_Power__c, Health__c 
-      FROM Ship__c 
-      WHERE Friend_or_Foe__c = 'Enemy' 
-      LIMIT 100];
-    return enemyShips;
-  }
-
-  public list<Ship__c> getActiveEnemyShips() {
+    public list<Ship__c> getEnemyShips() {
+        list<Ship__c> enemyShips = [SELECT id, name, Status__c, Weapon__c, Attack_Power__c, Health__c 
+                                    FROM Ship__c 
+                                    WHERE Friend_or_Foe__c = 'Enemy' 
+                                    LIMIT 100];
+        return enemyShips;
+    }
+    
     // get a list of only non-deceased enemy ships
-    list<Ship__c> enemyShips = [SELECT id, name, Status__c, Weapon__c, Attack_Power__c, Health__c 
-      FROM Ship__c 
-      WHERE Friend_or_Foe__c = 'Enemy' 
-      AND Status__c = 'Active' 
-      LIMIT 100];
-    return enemyShips;
-  }
-
-  public Ship__c getPlayerShip() {
-    // returns the player's ship. This method probably needs some retuning since there could be more than one "playable" ship 
-    return [SELECT id, Name, Weapon__c, Attack_Power__c, Status__c, Health__c 
-      FROM Ship__c 
-      WHERE Friend_or_Foe__c = 'Playable' 
-      LIMIT 1];      
-  }
-
-  public void addPlayerShip() {
+    public list<Ship__c> getActiveEnemyShips() {
+        list<Ship__c> enemyShips = [SELECT id, name, Status__c, Weapon__c, Attack_Power__c, Health__c 
+                                    FROM Ship__c 
+                                    WHERE Friend_or_Foe__c = 'Enemy' 
+                                    AND Status__c = 'Active' 
+                                    LIMIT 100];
+        return enemyShips;
+    }
+    
+    public Ship__c getPlayerShip() {
+        // returns the player's ship. This method probably needs some retuning since there could be more than one "playable" ship 
+        return [SELECT id, Name, Weapon__c, Attack_Power__c, Status__c, Health__c 
+                FROM Ship__c 
+                WHERE Friend_or_Foe__c = 'Playable' 
+                LIMIT 1];      
+    }
+    
     // creates a single ship for the player. 
-    insert new Ship__c(Name='USS Enterprise', Status__c='Active', Weapon__c='Photon Torpedoes', Attack_Power__c=20, Health__c=100, Friend_or_Foe__c = 'Playable');
-  }
-
-  public Integer fireWeapons(Ship__c ship) {
+    public void addPlayerShip() {
+        insert new Ship__c(Name='USS Enterprise', Status__c='Active', Weapon__c='Photon Torpedoes', Attack_Power__c=20, Health__c=100, Friend_or_Foe__c = 'Playable');
+    }
+    
     // determines the amount of damage based on a multiplier of the ship's attack power
-    return (Integer)Math.ceil(Math.random() * ship.Attack_Power__c + 10);
-  }
-
-  public void purgeDeadEnemies() {
+    public Integer fireWeapons(Ship__c ship) {
+        return (Integer)Math.ceil(Math.random() * ship.Attack_Power__c + 10);
+    }
+       
     // deletes any "deceased" ships from the database. Technically, this deletes deceased player ships as well
-    List<Ship__c> deadEnemies = [SELECT Id FROM Ship__c WHERE Status__c = 'Deceased'];
-
-    try {
-      delete deadEnemies;
-    } catch (DmlException e) {
-      statusFieldA = 'Error while deleting deceased ships from database. Exception: ' + e;
+    public void purgeDeadEnemies() {
+        List<Ship__c> deadEnemies = [SELECT Id FROM Ship__c WHERE Status__c = 'Deceased'];
+        
+        try {
+            delete deadEnemies;
+        } catch (DmlException e) {
+            statusFieldA = 'Error while deleting deceased ships from database. Exception: ' + e;
+        }
     }
-  }
-
-  public void generateEnemies() {
+    
     // Creates between 1 and 3 new random enemy ships 
-    enemyTableVisibility = true;
-
-    Integer numberOfShipsToGenerate = (Integer)Math.ceil(Math.random() * 3);
-    Integer shipType = 0;
-
-    // for each ship type is assigned to a switch condition. The "Borg Cube" is there as a default and should theoretically never be created.
-    for (Integer i = 0; i < numberOfShipsToGenerate; i++) {
-
-      shipType = (Integer)Math.ceil(Math.random() * 3);
-
-      switch on shipType {
-        when 1 {
-          insert new Ship__c(Name='Star Destroyer', Status__c='Active', Weapon__c='Ion Cannon', Attack_Power__c=10, Health__c=40, Friend_or_Foe__c = 'Enemy');
+    public void generateEnemies() {
+        enemyTableVisibility = true;
+        
+        Integer numberOfShipsToGenerate = (Integer)Math.ceil(Math.random() * 3);
+        Integer shipType = 0;
+        
+        // for each ship type is assigned to a switch condition. The "Borg Cube" is there as a default and should theoretically never be created.
+        for (Integer i = 0; i < numberOfShipsToGenerate; i++) {
+            
+            shipType = (Integer)Math.ceil(Math.random() * 3);
+            
+            switch on shipType {
+                when 1 {
+                    insert new Ship__c(Name='Star Destroyer', Status__c='Active', Weapon__c='Ion Cannon', Attack_Power__c=10, Health__c=40, Friend_or_Foe__c = 'Enemy');
+                }
+                when 2 {
+                    insert new Ship__c(Name='Romulan Warbird', Status__c='Active', Weapon__c='Disruptor Beam', Attack_Power__c=12, Health__c=30, Friend_or_Foe__c = 'Enemy');
+                }
+                when 3 {
+                    insert new Ship__c(Name='Klingon Bird of Prey', Status__c='Active', Weapon__c='Phasers', Attack_Power__c=15, Health__c=25, Friend_or_Foe__c = 'Enemy');
+                }
+                when else {
+                    insert new Ship__c(Name='Borg Cube', Status__c='Active', Weapon__c='Cutting Beam', Attack_Power__c=30, Health__c=200, Friend_or_Foe__c = 'Enemy');
+                }
+            }
         }
-        when 2 {
-          insert new Ship__c(Name='Romulan Warbird', Status__c='Active', Weapon__c='Disruptor Beam', Attack_Power__c=12, Health__c=30, Friend_or_Foe__c = 'Enemy');
-        }
-        when 3 {
-          insert new Ship__c(Name='Klingon Bird of Prey', Status__c='Active', Weapon__c='Phasers', Attack_Power__c=15, Health__c=25, Friend_or_Foe__c = 'Enemy');
-        }
-        when else {
-          insert new Ship__c(Name='Borg Cube', Status__c='Active', Weapon__c='Cutting Beam', Attack_Power__c=30, Health__c=200, Friend_or_Foe__c = 'Enemy');
-        }
-      }
-    }
-
-  } // end generateEnemies()
+          
+    } // end generateEnemies()
 
 }
