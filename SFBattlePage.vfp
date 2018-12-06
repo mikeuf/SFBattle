@@ -16,8 +16,8 @@
         <apex:pageBlockSection >
             <apex:form > 
                 <apex:commandButton action="{!newGame}" value="New Game" />
-                <apex:commandButton action="{!fightBattle}" value="Fire Photon Torpedoes" />
-                <apex:commandButton action="{!generateEnemies}" value="Generate More Enemies" />     
+                <apex:commandButton action="{!fightBattle}" value="Fire Photon Torpedoes" rendered="{!isFirePhotonTorpedoesButtonVisible}"/>
+                <apex:commandButton action="{!generateEnemies}" value="Generate More Enemies" rendered="{!isGenerateMoreEnemiesButtonVisible}"/>     
             </apex:form>
              
             <!-- BEGIN PLAYER INFORMATION PANEL -->
