@@ -4,7 +4,7 @@ This is a silly "space battle" simulator.<br /><br />
 It is primarily a vehicle to experiment with performing various DML operations and
 become more accustomed to designing event/button-driven programs where the state only lasts for as long as a single transaction.
 
-*Note:* At this time most variables are set to public. It's possible that they don't need to be -- I may update this in the future. Exception handling has only been implemented in a couple of places.
+**Note:** At this time most variables are set to public. It's possible that they don't need to be -- I may update this in the future. Exception handling has only been implemented in a couple of places.
 
 ## Typical Gameplay
 The player is initially presented with a Welcome screen (Figure 1). Clicking **New Game** begins the game. <br />
